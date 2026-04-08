@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjAI — NSFW Art Search Agent</title>
+    <meta name="description" content="ProjAI — AI-powered NSFW Art Search Agent. Search across multiple booru sources with intelligent tag parsing and automated browsing.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Dynamic Floating Squares Canvas -->
+    <canvas id="particleCanvas"></canvas>
+    
+    <!-- Gradient Background Layers -->
+    <div class="bg-gradient bg-gradient-1"></div>
+    <div class="bg-gradient bg-gradient-2"></div>
+    <div class="bg-gradient bg-gradient-3"></div>
+    
+    <!-- Noise Texture Overlay -->
+    <div class="noise-overlay"></div>
+    
+    <!-- Glass Blur Overlay -->
+    <div class="glass-overlay"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar glass-card">
+        <div class="nav-content">
+            <div class="nav-logo">
+                <div class="logo-icon">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <defs>
+                            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#a855f7"/>
+                                <stop offset="50%" style="stop-color:#6366f1"/>
+                                <stop offset="100%" style="stop-color:#06b6d4"/>
+                            </linearGradient>
+                        </defs>
+                        <rect width="32" height="32" rx="8" fill="url(#logoGrad)" opacity="0.9"/>
+                        <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="16" font-weight="700">P</text>
+                    </svg>
+                </div>
+                <span class="logo-text">ProjAI</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#guide" class="nav-link">Guide</a>
+                <a href="#status" class="nav-link">Status</a>
+                <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="nav-link nav-cta">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    GitHub
+                </a>
+            </div>
+            <button class="nav-mobile-btn" id="mobileMenuBtn">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu glass-card" id="mobileMenu">
+        <a href="#features" class="mobile-link">Features</a>
+        <a href="#guide" class="mobile-link">Guide</a>
+        <a href="#status" class="mobile-link">Status</a>
+        <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="mobile-link">GitHub</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge glass-card-inline">
+                <span class="badge-dot"></span>
+                <span>AI-Powered Art Search</span>
+            </div>
+            <h1 class="hero-title">
+                <span class="title-line">Search Art with</span>
+                <span class="title-gradient">Intelligence</span>
+            </h1>
+            <p class="hero-description">
+                ProjAI is an autonomous NSFW art search agent that leverages AI and headless browsing to discover and collect artwork across multiple booru platforms — fully automated, running on GitHub Actions.
+            </p>
+            <div class="hero-actions">
+                <a href="#guide" class="btn btn-primary glass-card-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                    Get Started
+                </a>
+                <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="btn btn-secondary glass-card-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    View Repository
+                </a>
+            </div>
+        </div>
+        <!-- Floating Tech Elements -->
+        <div class="hero-float float-1 glass-card">Gelbooru</div>
+        <div class="hero-float float-2 glass-card">Rule34</div>
+        <div class="hero-float float-3 glass-card">Puppeteer</div>
+        <div class="hero-float float-4 glass-card">AI Chat</div>
+    </section>
+
+    <!-- Internal Repository Notice -->
+    <section class="internal-notice" id="status">
+        <div class="notice-card glass-card">
+            <div class="notice-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#noticeGrad)" stroke-width="1.5">
+                    <defs>
+                        <linearGradient id="noticeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#f59e0b"/>
+                            <stop offset="100%" style="stop-color:#ef4444"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                    <circle cx="12" cy="16" r="1"/>
+                </svg>
+            </div>
+            <div class="notice-content">
+                <h2 class="notice-title">Currently Internal</h2>
+                <p class="notice-text">
+                    The <strong>nsfw-art-agent</strong> repository is currently <span class="highlight">private / internal</span> and under active development. 
+                    We are preparing the codebase for open source release. Please wait — once the repository goes public, you'll be able to fork and deploy it following the guide below.
+                </p>
+                <div class="notice-status">
+                    <div class="status-indicator">
+                        <span class="status-dot status-pulse"></span>
+                        <span>Active Development</span>
+                    </div>
+                    <div class="status-progress glass-card-inline">
+                        <div class="progress-bar">
+                            <div class="progress-fill"></div>
+                        </div>
+                        <span class="progress-text">Open Source Prep: 70%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <span class="section-tag glass-card-inline">Features</span>
+            <h2 class="section-title">Everything You Need for <span class="text-gradient">Automated Art Search</span></h2>
+            <p class="section-desc">Built with cutting-edge technology stack, ProjAI automates the entire art discovery pipeline.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card glass-card">
+                <div class="feature-icon glass-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                </div>
+                <h3>Multi-Source Search</h3>
+                <p>Search across Gelbooru, Rule34.xxx and more simultaneously. Intelligent tag parsing with autocomplete validation ensures accurate results every time.</p>
+                <div class="feature-tags">
+                    <span class="tag">Gelbooru</span>
+                    <span class="tag">Rule34</span>
+                    <span class="tag">Multi-booru</span>
+                </div>
+            </div>
+            <div class="feature-card glass-card">
+                <div class="feature-icon glass-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <h3>Headless Browsing</h3>
+                <p>Puppeteer-powered automated browsing handles authentication, consent flows, and dynamic content loading — no manual interaction needed.</p>
+                <div class="feature-tags">
+                    <span class="tag">Puppeteer</span>
+                    <span class="tag">Stealth</span>
+                    <span class="tag">Incognito</span>
+                </div>
+            </div>
+            <div class="feature-card glass-card">
+                <div class="feature-icon glass-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </div>
+                <h3>AI Chat Assistant</h3>
+                <p>Built-in AI chat powered by a local LLM (Qwen2.5-7B). Ask questions, get recommendations, and interact with your search results intelligently.</p>
+                <div class="feature-tags">
+                    <span class="tag">LLM</span>
+                    <span class="tag">Qwen2.5</span>
+                    <span class="tag">Local AI</span>
+                </div>
+            </div>
+            <div class="feature-card glass-card">
+                <div class="feature-icon glass-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <h3>GitHub Actions</h3>
+                <p>Fully automated CI/CD pipeline. The agent runs on GitHub Actions runners with ngrok tunneling — no server or VPS required on your end.</p>
+                <div class="feature-tags">
+                    <span class="tag">CI/CD</span>
+                    <span class="tag">Ngrok</span>
+                    <span class="tag">Automated</span>
+                </div>
+            </div>
+            <div class="feature-card glass-card">
+                <div class="feature-icon glass-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                </div>
+                <h3>Modern UI</h3>
+                <p>Material You dark theme with glass morphism, smooth animations, and responsive design. Image grid with masonry layout and lightbox viewer.</p>
+                <div class="feature-tags">
+                    <span class="tag">Material You</span>
+                    <span class="tag">Glass UI</span>
+                    <span class="tag">Responsive</span>
+                </div>
+            </div>
+            <div class="feature-card glass-card">
+                <div class="feature-icon glass-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h3>Visit Buff System</h3>
+                <p>Automated incognito browsing with multiple contexts to simulate organic visits. Track progress with real-time stats for visits, elapsed time, and rate.</p>
+                <div class="feature-tags">
+                    <span class="tag">Automation</span>
+                    <span class="tag">Stats</span>
+                    <span class="tag">Incognito</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="tech-stack">
+        <div class="section-header">
+            <span class="section-tag glass-card-inline">Stack</span>
+            <h2 class="section-title">Powered by <span class="text-gradient">Modern Tech</span></h2>
+        </div>
+        <div class="tech-grid">
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🟢</span>
+                <span class="tech-name">Node.js</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">⚡</span>
+                <span class="tech-name">Express</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🎭</span>
+                <span class="tech-name">Puppeteer</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🐍</span>
+                <span class="tech-name">Python</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🧠</span>
+                <span class="tech-name">Qwen2.5 LLM</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🔀</span>
+                <span class="tech-name">GitHub Actions</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🌐</span>
+                <span class="tech-name">Ngrok</span>
+            </div>
+            <div class="tech-item glass-card">
+                <span class="tech-emoji">🎨</span>
+                <span class="tech-name">Material You</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Guide Section -->
+    <section class="guide" id="guide">
+        <div class="section-header">
+            <span class="section-tag glass-card-inline">Setup Guide</span>
+            <h2 class="section-title">How to <span class="text-gradient">Fork & Deploy</span></h2>
+            <p class="section-desc">Follow these steps to set up your own instance of ProjAI once the repository goes open source.</p>
+        </div>
+
+        <div class="guide-timeline">
+            <!-- Step 1 -->
+            <div class="guide-step glass-card">
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h3>Fork the Repository</h3>
+                    <p>Navigate to the <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="link">nsfw-art-agent</a> repository on GitHub and click the <strong>Fork</strong> button in the top-right corner. This creates a personal copy of the repository under your own GitHub account, giving you full control over the codebase while maintaining a link to the original project for upstream updates.</p>
+                    <div class="step-code">
+                        <code># After forking, clone your fork locally</code>
+                        <code>git clone https://github.com/<span class="code-accent">YOUR_USERNAME</span>/nsfw-art-agent.git</code>
+                        <code>cd nsfw-art-agent</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="guide-step glass-card">
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h3>Set Up GitHub Secrets</h3>
+                    <p>Go to your forked repository's <strong>Settings &rarr; Secrets and variables &rarr; Actions</strong>. Add the following required secrets that the GitHub Actions workflow needs to function properly. These secrets are used for ngrok authentication and any API keys needed for external services.</p>
+                    <div class="secrets-list">
+                        <div class="secret-item glass-card-inline">
+                            <span class="secret-name">NGROK_AUTH_TOKEN</span>
+                            <span class="secret-desc">Your ngrok authentication token from <a href="https://dashboard.ngrok.com" target="_blank" class="link">ngrok.com</a></span>
+                        </div>
+                        <div class="secret-item glass-card-inline">
+                            <span class="secret-name">NGROK_DOMAIN</span>
+                            <span class="secret-desc">(Optional) Your reserved static ngrok domain for consistent URLs</span>
+                        </div>
+                    </div>
+                    <p class="step-note">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                        To get a free ngrok auth token, sign up at <a href="https://dashboard.ngrok.com/signup" target="_blank" class="link">ngrok.com/signup</a> and navigate to Your Authtoken section.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="guide-step glass-card">
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h3>Enable GitHub Actions</h3>
+                    <p>In your forked repository, navigate to the <strong>Actions</strong> tab. GitHub will prompt you to enable workflows — click <strong>"I understand my workflows, go ahead and enable them"</strong>. The deploy workflow (<code>deploy.yml</code>) will automatically build the environment, download the LLM model, and start the server with ngrok tunneling.</p>
+                    <div class="step-visual glass-card">
+                        <div class="workflow-diagram">
+                            <div class="wf-step">
+                                <div class="wf-icon">📦</div>
+                                <span>Setup Node.js</span>
+                            </div>
+                            <div class="wf-arrow">&rarr;</div>
+                            <div class="wf-step">
+                                <div class="wf-icon">🐍</div>
+                                <span>Build LLM</span>
+                            </div>
+                            <div class="wf-arrow">&rarr;</div>
+                            <div class="wf-step">
+                                <div class="wf-icon">🧠</div>
+                                <span>Download Qwen2.5</span>
+                            </div>
+                            <div class="wf-arrow">&rarr;</div>
+                            <div class="wf-step">
+                                <div class="wf-icon">🌐</div>
+                                <span>Start Ngrok</span>
+                            </div>
+                            <div class="wf-arrow">&rarr;</div>
+                            <div class="wf-step">
+                                <div class="wf-icon">🚀</div>
+                                <span>Run Agent</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="guide-step glass-card">
+                <div class="step-number">04</div>
+                <div class="step-content">
+                    <h3>Access Your Agent</h3>
+                    <p>Once the GitHub Actions workflow completes (usually 3-5 minutes on first run due to LLM download), it will output your ngrok URL in the workflow logs. Look for the <strong>"ngrok URL"</strong> step output — this is your public access URL. Click it to open the ProjAI web interface and start searching!</p>
+                    <div class="step-code">
+                        <code># Your agent URL will look like:</code>
+                        <code>https://<span class="code-accent">xxxx-xxxx-xxxx</span>.ngrok-free.app</code>
+                        <code></code>
+                        <code># The workflow runs for 6 hours before auto-stopping.</code>
+                        <code># Manually re-trigger to restart.</code>
+                    </div>
+                    <p class="step-note">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                        GitHub Actions free tier allows up to 2,000 minutes/month. Each run uses ~360 minutes (6 hours). You get approximately 5 runs per month on the free plan.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="guide-step glass-card">
+                <div class="step-number">05</div>
+                <div class="step-content">
+                    <h3>Configure & Customize (Optional)</h3>
+                    <p>After your agent is running, you can customize its behavior. The web interface provides controls for search sources, AI chat settings, and visit buff configuration. For deeper customization, edit the <code>server.js</code> and workflow files in your fork. You can also modify the LLM model by changing the download URL in <code>deploy.yml</code>.</p>
+                    <div class="customization-list">
+                        <div class="custom-item">
+                            <span class="custom-check">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <span>Switch between Gelbooru and Rule34 search sources</span>
+                        </div>
+                        <div class="custom-item">
+                            <span class="custom-check">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <span>Adjust visit buff worker count and interval timing</span>
+                        </div>
+                        <div class="custom-item">
+                            <span class="custom-check">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <span>Change AI model (Qwen2.5-7B, Llama, Mistral, etc.)</span>
+                        </div>
+                        <div class="custom-item">
+                            <span class="custom-check">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            </span>
+                            <span>Customize UI theme and CSS styling</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq">
+        <div class="section-header">
+            <span class="section-tag glass-card-inline">FAQ</span>
+            <h2 class="section-title">Frequently <span class="text-gradient">Asked</span></h2>
+        </div>
+        <div class="faq-list">
+            <div class="faq-item glass-card" data-faq>
+                <div class="faq-question">
+                    <span>Is this project free to use?</span>
+                    <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Yes! ProjAI runs entirely on GitHub Actions free tier. You only need a free ngrok account for the tunnel. No paid services, no VPS, no cloud costs. Everything is serverless and automated through GitHub's infrastructure.</p>
+                </div>
+            </div>
+            <div class="faq-item glass-card" data-faq>
+                <div class="faq-question">
+                    <span>What are the system requirements?</span>
+                    <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>None! That's the beauty of it. The agent runs on GitHub Actions runners (2-core CPU, 7GB RAM, 14GB disk). You don't need any local hardware. Just a GitHub account and a web browser to access the agent's interface.</p>
+                </div>
+            </div>
+            <div class="faq-item glass-card" data-faq>
+                <div class="faq-question">
+                    <span>How long does each session last?</span>
+                    <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Each GitHub Actions run lasts up to 6 hours (the maximum for the free tier). The workflow includes a keep-alive mechanism and will auto-stop when time expires. Simply re-trigger the workflow to start a new session. First-time setup takes 3-5 minutes extra for LLM model download.</p>
+                </div>
+            </div>
+            <div class="faq-item glass-card" data-faq>
+                <div class="faq-question">
+                    <span>Can I use a different LLM model?</span>
+                    <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>Absolutely. The default is Qwen2.5-7B-Instruct (Q4_K_M quantization) for a balance of quality and resource usage. You can swap it for any GGUF model supported by llama-cpp-python — Llama 3, Mistral, Yi, etc. Just update the model URL in the deploy workflow.</p>
+                </div>
+            </div>
+            <div class="faq-item glass-card" data-faq>
+                <div class="faq-question">
+                    <span>When will the repository go public?</span>
+                    <svg class="faq-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <div class="faq-answer">
+                    <p>We're actively preparing the codebase for open source release — cleaning up code, adding documentation, and ensuring everything works out of the box for new users. Follow this page or star the repository to get notified when it goes public.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer glass-card">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="nav-logo">
+                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                        <rect width="32" height="32" rx="8" fill="url(#logoGrad2)" opacity="0.9"/>
+                        <defs><linearGradient id="logoGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#a855f7"/><stop offset="50%" style="stop-color:#6366f1"/><stop offset="100%" style="stop-color:#06b6d4"/></linearGradient></defs>
+                        <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="white" font-size="16" font-weight="700">P</text>
+                    </svg>
+                    <span class="logo-text">ProjAI</span>
+                </div>
+                <p class="footer-desc">AI-powered NSFW art search agent. Automated, intelligent, and free.</p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <h4>Project</h4>
+                    <a href="#features">Features</a>
+                    <a href="#guide">Setup Guide</a>
+                    <a href="#status">Status</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Resources</h4>
+                    <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank">GitHub</a>
+                    <a href="https://github.com/minhtristudio" target="_blank">Minh Tri Studio</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 ProjAI by Minh Tri Studio. Built with AI & GitHub Actions.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
