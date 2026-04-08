@@ -1,9 +1,14 @@
 /* ============================================
    ProjAI — Multi-canvas Particle System
    Glass Preview Panels + Interactions
+   Mobile Performance Optimized
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ─── ENVIRONMENT DETECTION ───
+    let isMobile = window.innerWidth < 768;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // ─── SINGLE ACCENT COLOR PALETTE ───
     // Muted, monochrome — NOT rainbow
@@ -47,6 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         update() {
+            // If reduced motion, skip all animation updates
+            if (prefersReducedMotion) return;
+
             this.life++;
             this.y += this.vy;
             this.x += this.vx;
@@ -113,8 +121,21 @@ document.addEventListener('DOMContentLoaded', () => {
             this.ctx = canvasEl.getContext('2d');
             this.particles = [];
             this.opts = opts;
+            this.visible = true;
+            this._isBg = false; // flag for background canvas
+
+            // On mobile, reduce particle count by 60% unless forceCount is set
+            if (isMobile && !opts.forceCount) {
+                opts.count = Math.max(8, Math.floor((opts.count || 30) * 0.4));
+            }
+
             this.resize();
             this.init();
+
+            // Register in canvasMap for visibility control
+            if (canvasEl.id) {
+                canvasMap[canvasEl.id] = this;
+            }
         }
 
         resize() {
@@ -134,13 +155,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw() {
+            // Skip if this canvas is not visible in viewport
+            if (!this.visible) return;
+
+            // On mobile, skip background canvas entirely (hidden behind glass)
+            if (isMobile && this._isBg) return;
+
+            // If reduced motion, only draw once (static frame)
+            if (prefersReducedMotion && this._drawnOnce) return;
+
             this.ctx.clearRect(0, 0, this.w, this.h);
 
-            // Subtle grid
+            // Subtle grid — larger grid size on mobile for performance
             this.ctx.globalAlpha = 0.012;
             this.ctx.strokeStyle = '#6c6ff1';
             this.ctx.lineWidth = 0.5;
-            const gs = 60;
+            const gs = isMobile ? 100 : 60;
             for (let x = 0; x < this.w; x += gs) {
                 this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.h); this.ctx.stroke();
             }
@@ -149,28 +179,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             this.ctx.globalAlpha = 1;
 
-            // Connection lines
-            const ps = this.particles;
-            for (let i = 0; i < ps.length; i++) {
-                for (let j = i + 1; j < ps.length; j++) {
-                    const dx = ps[i].x - ps[j].x;
-                    const dy = ps[i].y - ps[j].y;
-                    const d = Math.sqrt(dx * dx + dy * dy);
-                    if (d < 120) {
-                        const a = (1 - d / 120) * 0.03 * Math.min(ps[i].opacity, ps[j].opacity) * 15;
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(ps[i].x, ps[i].y);
-                        this.ctx.lineTo(ps[j].x, ps[j].y);
-                        this.ctx.strokeStyle = `rgba(108,111,241,${a})`;
-                        this.ctx.lineWidth = 0.4;
-                        this.ctx.stroke();
+            // Connection lines — skip on mobile (O(n²) is expensive)
+            if (!isMobile) {
+                const ps = this.particles;
+                for (let i = 0; i < ps.length; i++) {
+                    for (let j = i + 1; j < ps.length; j++) {
+                        const dx = ps[i].x - ps[j].x;
+                        const dy = ps[i].y - ps[j].y;
+                        const d = Math.sqrt(dx * dx + dy * dy);
+                        if (d < 120) {
+                            const a = (1 - d / 120) * 0.03 * Math.min(ps[i].opacity, ps[j].opacity) * 15;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(ps[i].x, ps[i].y);
+                            this.ctx.lineTo(ps[j].x, ps[j].y);
+                            this.ctx.strokeStyle = `rgba(108,111,241,${a})`;
+                            this.ctx.lineWidth = 0.4;
+                            this.ctx.stroke();
+                        }
                     }
                 }
             }
 
-            ps.forEach(p => { p.update(); p.draw(this.ctx); });
+            this.particles.forEach(p => { p.update(); p.draw(this.ctx); });
+
+            // Mark as drawn for reduced-motion static mode
+            if (prefersReducedMotion) {
+                this._drawnOnce = true;
+            }
         }
     }
+
+
+    // ─── CANVAS VISIBILITY MAP ───
+    const canvasMap = {};
 
 
     // ─── INITIALIZE ALL CANVASES ───
@@ -178,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Background canvas
     const bgCanvas = document.getElementById('bgCanvas');
     const bgPC = new ParticleCanvas(bgCanvas, { count: Math.min(50, Math.floor(window.innerWidth / 30)) });
+    bgPC._isBg = true;
 
     // Hero preview canvas
     const heroCanvas = document.getElementById('heroPreviewCanvas');
@@ -201,42 +243,145 @@ document.addEventListener('DOMContentLoaded', () => {
     // All canvases to animate
     const allCanvases = [bgPC, heroPC, hpc1, hpc2, hpc3, featPC].filter(Boolean);
 
+    // ─── INTERSECTION OBSERVER FOR CANVAS VISIBILITY ───
+    // Pause canvases that are off-screen to save battery, especially on mobile
+    const canvasObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const canvasId = entry.target.id;
+            const instance = canvasMap[canvasId];
+            if (instance) {
+                instance.visible = entry.isIntersecting;
+            }
+        });
+    }, { threshold: 0 });
+
+    // Observe all canvas elements
+    allCanvases.forEach(c => {
+        if (c.canvas) canvasObserver.observe(c.canvas);
+    });
+
+
+    // ─── FPS-THROTTLED ANIMATION LOOP ───
     let animId;
     let running = true;
+    let lastFrame = 0;
+    const TARGET_FPS = isMobile ? 24 : 60;
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
-    function animate() {
-        allCanvases.forEach(c => c.draw());
+    function animate(timestamp) {
         animId = requestAnimationFrame(animate);
-    }
-    animate();
 
-    // Visibility pause
+        // Frame throttling
+        if (timestamp - lastFrame < FRAME_INTERVAL) return;
+        lastFrame = timestamp;
+
+        allCanvases.forEach(c => c.draw());
+    }
+
+    // If reduced motion, draw once then stop the loop entirely
+    if (prefersReducedMotion) {
+        allCanvases.forEach(c => c.draw());
+        // Still set up the loop so visibility changes can trigger redraws
+        animId = requestAnimationFrame(function reducedAnimate(ts) {
+            // Only redraw if a canvas just became visible and needs a static frame
+            animId = requestAnimationFrame(reducedAnimate);
+        });
+    } else {
+        animate(0);
+    }
+
+    // Visibility pause — enhanced with frame throttle reset
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             cancelAnimationFrame(animId);
             running = false;
         } else if (!running) {
-            animate();
-            running = true;
+            lastFrame = 0; // Reset throttle so next frame renders immediately
+            if (prefersReducedMotion) {
+                allCanvases.forEach(c => { c._drawnOnce = false; c.draw(); });
+                running = true;
+            } else {
+                animate(0);
+                running = true;
+            }
         }
     });
 
-    // Resize
+
+    // ─── RESIZE HANDLER (DEBOUNCED) ───
+    // On resize, recalculate mobile state and rebuild particle counts if needed
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
-            bgPC.resize();
-            bgPC.particles.forEach(p => { p.cw = bgPC.w; p.ch = bgPC.h; });
-            // Re-init for proper count
-            bgPC.particles = [];
-            bgPC.init();
-            if (heroPC) { heroPC.resize(); heroPC.particles.forEach(p => { p.cw = heroPC.w; p.ch = heroPC.h; }); }
-            [hpc1, hpc2, hpc3, featPC].forEach(c => {
-                if (c) { c.resize(); c.particles.forEach(p => { p.cw = c.w; p.ch = c.h; }); }
-            });
+            const wasMobile = isMobile;
+            isMobile = window.innerWidth < 768;
+
+            // Recalculate FPS target when mobile state changes
+            // (Inlined — no separate assignment since TARGET_FPS is const,
+            //  we adjust via the draw method's isMobile check)
+
+            if (wasMobile !== isMobile) {
+                // Mobile state changed — rebuild background canvas with appropriate count
+                bgPC.particles = [];
+                if (isMobile && !bgPC.opts.forceCount) {
+                    bgPC.opts.count = Math.max(8, Math.floor(50 * 0.4));
+                } else if (!wasMobile) {
+                    bgPC.opts.count = Math.min(50, Math.floor(window.innerWidth / 30));
+                }
+                bgPC.resize();
+                bgPC.init();
+
+                // Rebuild hero canvas
+                if (heroPC) {
+                    heroPC.particles = [];
+                    if (isMobile && !heroPC.opts.forceCount) {
+                        heroPC.opts.count = Math.max(8, Math.floor(30 * 0.4));
+                    } else {
+                        heroPC.opts.count = 30;
+                    }
+                    heroPC.resize();
+                    heroPC.init();
+                }
+
+                // Rebuild how-it-works canvases
+                [hpc1, hpc2, hpc3].forEach(c => {
+                    if (c) {
+                        c.particles = [];
+                        if (isMobile && !c.opts.forceCount) {
+                            c.opts.count = Math.max(8, Math.floor(18 * 0.4));
+                        } else {
+                            c.opts.count = 18;
+                        }
+                        c.resize();
+                        c.init();
+                    }
+                });
+
+                // Rebuild features canvas
+                if (featPC) {
+                    featPC.particles = [];
+                    if (isMobile && !featPC.opts.forceCount) {
+                        featPC.opts.count = Math.max(8, Math.floor(35 * 0.4));
+                    } else {
+                        featPC.opts.count = 35;
+                    }
+                    featPC.resize();
+                    featPC.init();
+                }
+            } else {
+                // Same mobile state — just resize
+                bgPC.resize();
+                bgPC.particles.forEach(p => { p.cw = bgPC.w; p.ch = bgPC.h; });
+                bgPC.particles = [];
+                bgPC.init();
+                if (heroPC) { heroPC.resize(); heroPC.particles.forEach(p => { p.cw = heroPC.w; p.ch = heroPC.h; }); }
+                [hpc1, hpc2, hpc3, featPC].forEach(c => {
+                    if (c) { c.resize(); c.particles.forEach(p => { p.cw = c.w; p.ch = c.h; }); }
+                });
+            }
         }, 200);
-    });
+    }, { passive: true });
 
 
     // ─── NAV SCROLL ───
@@ -246,24 +391,65 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { passive: true });
 
 
+    // ─── BACK TO TOP BUTTON ───
+    const backToTop = document.querySelector('.back-to-top');
+    if (backToTop) {
+        window.addEventListener('scroll', () => {
+            backToTop.classList.toggle('visible', window.scrollY > 600);
+        }, { passive: true });
+
+        backToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+
     // ─── MOBILE MENU ───
     const burger = document.getElementById('navBurger');
     const mobileNav = document.getElementById('mobileNav');
+    let menuOpen = false;
+
+    function openMobileMenu() {
+        menuOpen = true;
+        mobileNav.classList.add('open');
+        burger.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileMenu() {
+        menuOpen = false;
+        mobileNav.classList.remove('open');
+        burger.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
     if (burger && mobileNav) {
         burger.addEventListener('click', () => {
-            mobileNav.classList.toggle('open');
-            burger.classList.toggle('active');
+            if (menuOpen) {
+                closeMobileMenu();
+            } else {
+                openMobileMenu();
+            }
         });
+
+        // Close on anchor link click
         mobileNav.querySelectorAll('a').forEach(a => {
             a.addEventListener('click', () => {
-                mobileNav.classList.remove('open');
-                burger.classList.remove('active');
+                closeMobileMenu();
             });
         });
+
+        // Close on outside click
         document.addEventListener('click', e => {
-            if (!burger.contains(e.target) && !mobileNav.contains(e.target)) {
-                mobileNav.classList.remove('open');
-                burger.classList.remove('active');
+            if (menuOpen && !burger.contains(e.target) && !mobileNav.contains(e.target)) {
+                closeMobileMenu();
+            }
+        });
+
+        // Close on Escape key press
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && menuOpen) {
+                closeMobileMenu();
             }
         });
     }
@@ -300,5 +486,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const style = document.createElement('style');
     style.textContent = '.revealed { opacity: 1 !important; transform: translateY(0) !important; }';
     document.head.appendChild(style);
+
+
+    // ─── TOUCH GESTURE SUPPORT (Hero Preview Panel) ───
+    const heroPreview = document.querySelector('.hero-preview');
+    if (heroPreview && 'ontouchstart' in window) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        heroPreview.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        heroPreview.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+
+            // Only detect horizontal swipes (not vertical scrolls)
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                heroPreview.style.transform = dx > 0
+                    ? 'translateX(8px)'
+                    : 'translateX(-8px)';
+                setTimeout(() => {
+                    heroPreview.style.transition = 'transform 0.3s ease';
+                    heroPreview.style.transform = '';
+                    setTimeout(() => { heroPreview.style.transition = ''; }, 300);
+                }, 100);
+            }
+        }, { passive: true });
+    }
 
 });

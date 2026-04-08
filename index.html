@@ -2,14 +2,423 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#08080c">
     <title>ProjAI — Autonomous Art Search Agent</title>
     <meta name="description" content="ProjAI — AI-powered autonomous art search agent. Runs on GitHub Actions with zero infrastructure cost.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230c0c0c'/><text x='50' y='54' dominant-baseline='middle' text-anchor='middle' fill='%238b8b9e' font-size='52' font-weight='700' font-family='system-ui'>P</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230c0c0c'/><text x='50' y='54' dominant-baseline='middle' text-anchor='middle' fill='%238b8b9e' font-size='52' font-weight='700' font-family='system-ui'>P</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+
+    <!-- Mobile-enhancement overrides (loaded after style.css) -->
+    <style>
+        /* =============================================
+           MOBILE NAV — Full overlay panel
+           ============================================= */
+
+        .mobile-nav-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 199;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0s 0.3s;
+        }
+        .mobile-nav-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transition: opacity 0.3s ease, visibility 0s;
+        }
+
+        /* Override external .mobile-nav to full-height side panel */
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: auto;
+            z-index: 200;
+            width: 320px;
+            max-width: 85vw;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            background: rgba(10,10,14,0.94);
+            border: none;
+            border-left: 1px solid var(--border);
+            border-radius: 0;
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            transform: translateX(100%);
+            visibility: hidden;
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0.4s;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .mobile-nav.open {
+            display: flex;
+            transform: translateX(0);
+            visibility: visible;
+            pointer-events: auto;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s;
+        }
+        /* Glass shine line on the left edge */
+        .mobile-nav::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(180deg, transparent 5%, rgba(255,255,255,0.06) 50%, transparent 95%);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .mobile-nav-inner {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            padding-top: 24px;
+            gap: 2px;
+            min-height: 100%;
+            padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+        }
+        .mobile-nav-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .mobile-nav-title {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+        .mobile-nav-close {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: var(--text-3);
+            cursor: pointer;
+            transition: color .2s, background .2s, border-color .2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-nav-close:hover,
+        .mobile-nav-close:focus-visible {
+            color: var(--text);
+            background: rgba(255,255,255,0.06);
+            border-color: var(--border-hover);
+        }
+        .mobile-nav a {
+            padding: 14px 16px;
+            border-radius: 10px;
+            color: var(--text-2);
+            font-size: .92rem;
+            font-weight: 500;
+            transition: color .2s, background .2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-nav a:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.04);
+        }
+        .mobile-nav a:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: -2px;
+        }
+
+        /* Body scroll lock when mobile nav is open */
+        body.mobile-nav-open {
+            overflow: hidden;
+        }
+
+        /* Burger X animation */
+        .nav-burger span {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+            transform-origin: center;
+        }
+        .nav-burger.active span:first-child {
+            transform: translateY(2.75px) rotate(45deg);
+        }
+        .nav-burger.active span:last-child {
+            transform: translateY(-2.75px) rotate(-45deg);
+        }
+
+        /* =============================================
+           HERO — Mobile refinements
+           ============================================= */
+
+        @media (max-width: 768px) {
+            .hero {
+                padding: 100px 20px 48px;
+                gap: 36px;
+            }
+            .hero-body {
+                font-size: .92rem;
+                max-width: 100%;
+            }
+            .hero-preview {
+                max-height: 380px;
+            }
+            .preview-canvas-wrap {
+                max-height: 380px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero {
+                padding: 88px 16px 36px;
+                gap: 28px;
+            }
+            .hero-preview {
+                max-height: 320px;
+            }
+            .preview-canvas-wrap {
+                max-height: 320px;
+            }
+            .frame-content {
+                height: 180px !important;
+            }
+            .hero-eyebrow {
+                font-size: .72rem;
+                margin-bottom: 20px;
+            }
+        }
+
+        /* =============================================
+           HOW IT WORKS — Mobile canvas height
+           ============================================= */
+
+        @media (max-width: 600px) {
+            .how-card-preview {
+                height: 160px;
+            }
+            .how-card-preview .preview-canvas {
+                height: 160px;
+            }
+        }
+
+        /* =============================================
+           FEATURES — Mobile layout note
+           On mobile, features-preview appears below
+           the features-list (handled by existing
+           grid-template-columns: 1fr at 900px)
+           ============================================= */
+
+        @media (max-width: 900px) {
+            .features-preview {
+                position: static !important;
+                order: 2;
+            }
+            .features-list {
+                order: 1;
+            }
+            .preview-canvas-wrap.large {
+                min-height: 360px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .preview-canvas-wrap.large {
+                min-height: 300px;
+            }
+            .tech-row {
+                padding: 8px 12px;
+            }
+        }
+
+        /* =============================================
+           SETUP — Pipeline horizontal scroll
+           ============================================= */
+
+        .pipeline-scroll-wrap {
+            overflow: hidden;
+            border-radius: 10px;
+        }
+        @media (max-width: 600px) {
+            .pipeline-scroll-wrap {
+                margin: 12px -28px 0;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 10px;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .pipeline-scroll-wrap::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        /* =============================================
+           SCROLL-TO-TOP BUTTON
+           ============================================= */
+
+        .scroll-top-btn {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 150;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(10,10,14,0.8);
+            border: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            color: var(--text-3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity .25s ease, visibility 0s .25s, transform .25s ease, color .2s, background .2s, border-color .2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .scroll-top-btn.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+            transition: opacity .25s ease, visibility 0s, transform .25s ease, color .2s, background .2s, border-color .2s;
+        }
+        .scroll-top-btn:hover,
+        .scroll-top-btn:focus-visible {
+            color: var(--accent-fg);
+            background: rgba(108,111,241,0.08);
+            border-color: rgba(108,111,241,0.15);
+        }
+        .scroll-top-btn:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .scroll-top-btn {
+                bottom: 20px;
+                right: 20px;
+                bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            }
+        }
+
+        /* =============================================
+           FOOTER — Badges & improvements
+           ============================================= */
+
+        .footer-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .footer-badges {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .footer-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .7rem;
+            font-weight: 500;
+            color: var(--text-3);
+            padding: 4px 10px;
+            border-radius: 100px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .footer-badge svg {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+        }
+        .build-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34,197,94,0.4);
+            flex-shrink: 0;
+        }
+
+        /* =============================================
+           ACCESSIBILITY — Focus visible
+           ============================================= */
+
+        a:focus-visible,
+        .btn:focus-visible,
+        .nav-burger:focus-visible,
+        .faq-item summary:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        /* =============================================
+           SAFE AREA — iOS notch
+           ============================================= */
+
+        @supports (padding: env(safe-area-inset-top)) {
+            .nav {
+                top: max(16px, env(safe-area-inset-top, 16px));
+                padding-top: max(10px, calc(env(safe-area-inset-top, 0px) + 4px));
+            }
+            .hero {
+                padding-top: max(140px, calc(env(safe-area-inset-top, 0px) + 120px));
+            }
+            @media (max-width: 900px) {
+                .hero {
+                    padding-top: max(100px, calc(env(safe-area-inset-top, 0px) + 80px));
+                }
+            }
+        }
+
+        /* =============================================
+           REDUCED MOTION
+           ============================================= */
+
+        @media (prefers-reduced-motion: reduce) {
+            .mobile-nav,
+            .mobile-nav-backdrop,
+            .nav-burger span,
+            .scroll-top-btn,
+            .ambient-1,
+            .ambient-2,
+            .eyebrow-dot,
+            .status-ping {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Background particle canvas -->
@@ -23,12 +432,12 @@
     <div class="global-glass"></div>
 
     <!-- Navbar -->
-    <nav class="nav" id="nav">
+    <nav class="nav" id="nav" role="navigation" aria-label="Main navigation">
         <div class="nav-inner">
-            <a href="#" class="nav-brand">
+            <a href="#" class="nav-brand" aria-label="ProjAI — Home">
                 <div class="logo-glass">
                     <div class="logo-glass-bg"></div>
-                    <svg class="logo-svg" viewBox="0 0 28 28" fill="none">
+                    <svg class="logo-svg" viewBox="0 0 28 28" fill="none" aria-hidden="true">
                         <rect width="28" height="28" rx="6" fill="#1a1a2e"/>
                         <rect x="1" y="1" width="26" height="26" rx="5" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
                         <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#8b8b9e" font-size="14" font-weight="700" font-family="Inter, system-ui">P</text>
@@ -41,24 +450,44 @@
                 <a href="#how-it-works" class="nav-link">How it works</a>
                 <a href="#features" class="nav-link">Features</a>
                 <a href="#setup" class="nav-link">Setup</a>
-                <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="nav-link nav-link-cta">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="nav-link nav-link-cta" aria-label="View ProjAI on GitHub">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                     GitHub
                 </a>
             </div>
-            <button class="nav-burger" id="navBurger">
+            <button class="nav-burger" id="navBurger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="mobileNav">
                 <span></span><span></span>
             </button>
         </div>
     </nav>
 
-    <!-- Mobile menu -->
-    <div class="mobile-nav" id="mobileNav">
-        <a href="#how-it-works">How it works</a>
-        <a href="#features">Features</a>
-        <a href="#setup">Setup</a>
-        <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank">GitHub</a>
+    <!-- Mobile nav backdrop (separate element for click-outside detection) -->
+    <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
+
+    <!-- Mobile menu — full-height side panel -->
+    <div class="mobile-nav" id="mobileNav" role="dialog" aria-label="Navigation menu">
+        <div class="mobile-nav-inner">
+            <div class="mobile-nav-header">
+                <span class="mobile-nav-title">Navigation</span>
+                <button class="mobile-nav-close" id="mobileNavClose" aria-label="Close navigation menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <a href="#how-it-works">How it works</a>
+            <a href="#features">Features</a>
+            <a href="#setup">Setup</a>
+            <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" aria-label="View ProjAI on GitHub">GitHub</a>
+        </div>
     </div>
+
+    <!-- Scroll to top button -->
+    <button class="scroll-top-btn" id="scrollTopBtn" aria-label="Scroll to top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 15l-6-6-6 6"/>
+        </svg>
+    </button>
 
     <!-- ═══════════════════════════════════════
          HERO
@@ -80,12 +509,12 @@
                 ProjAI runs headless browsers with AI to search, collect, and organize artwork from multiple booru platforms. Zero infrastructure — it lives entirely on GitHub Actions.
             </p>
             <div class="hero-actions">
-                <a href="#setup" class="btn btn-primary">
+                <a href="#setup" class="btn btn-primary" aria-label="Get started with ProjAI">
                     <span>Get started</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
-                <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="btn btn-ghost">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                <a href="https://github.com/minhtristudio/nsfw-art-agent" target="_blank" class="btn btn-ghost" aria-label="View source code on GitHub">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
                     <span>Source</span>
                 </a>
             </div>
@@ -110,7 +539,7 @@
                     <div class="frame-main">
                         <div class="frame-search">
                             <div class="search-bar">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                                 <span>search tags...</span>
                             </div>
                         </div>
@@ -134,7 +563,7 @@
     <section class="status-section" id="status">
         <div class="status-banner">
             <div class="status-icon-wrap">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                 <span class="status-ping"></span>
             </div>
             <div class="status-body">
@@ -226,7 +655,7 @@
             <div class="features-list">
                 <div class="feat-item">
                     <div class="feat-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                     </div>
                     <div>
                         <h4>Multi-source search</h4>
@@ -235,7 +664,7 @@
                 </div>
                 <div class="feat-item">
                     <div class="feat-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                     </div>
                     <div>
                         <h4>Stealth browsing</h4>
@@ -244,7 +673,7 @@
                 </div>
                 <div class="feat-item">
                     <div class="feat-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                     </div>
                     <div>
                         <h4>AI chat assistant</h4>
@@ -253,7 +682,7 @@
                 </div>
                 <div class="feat-item">
                     <div class="feat-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                     </div>
                     <div>
                         <h4>Serverless runtime</h4>
@@ -262,7 +691,7 @@
                 </div>
                 <div class="feat-item">
                     <div class="feat-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     </div>
                     <div>
                         <h4>Visit buff system</h4>
@@ -271,7 +700,7 @@
                 </div>
                 <div class="feat-item">
                     <div class="feat-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                     </div>
                     <div>
                         <h4>Modern interface</h4>
@@ -359,41 +788,43 @@
                 <div class="step-body">
                     <h3>Enable Actions &amp; run</h3>
                     <p>Open the <strong>Actions</strong> tab, enable workflows, then trigger <code>deploy.yml</code>. The workflow will set up Node.js, compile the LLM, download Qwen2.5-7B, launch Puppeteer, and start ngrok — all automatically.</p>
-                    <!-- Pipeline preview -->
-                    <div class="pipeline-preview">
-                        <div class="pipeline-step">
-                            <div class="pipeline-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <!-- Pipeline preview — wrapped in scrollable container for mobile -->
+                    <div class="pipeline-scroll-wrap">
+                        <div class="pipeline-preview">
+                            <div class="pipeline-step">
+                                <div class="pipeline-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                </div>
+                                <span>Setup</span>
                             </div>
-                            <span>Setup</span>
-                        </div>
-                        <div class="pipeline-line"></div>
-                        <div class="pipeline-step">
-                            <div class="pipeline-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <div class="pipeline-line"></div>
+                            <div class="pipeline-step">
+                                <div class="pipeline-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                </div>
+                                <span>Build LLM</span>
                             </div>
-                            <span>Build LLM</span>
-                        </div>
-                        <div class="pipeline-line"></div>
-                        <div class="pipeline-step">
-                            <div class="pipeline-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <div class="pipeline-line"></div>
+                            <div class="pipeline-step">
+                                <div class="pipeline-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                </div>
+                                <span>Download model</span>
                             </div>
-                            <span>Download model</span>
-                        </div>
-                        <div class="pipeline-line"></div>
-                        <div class="pipeline-step">
-                            <div class="pipeline-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <div class="pipeline-line"></div>
+                            <div class="pipeline-step">
+                                <div class="pipeline-icon">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                </div>
+                                <span>Ngrok</span>
                             </div>
-                            <span>Ngrok</span>
-                        </div>
-                        <div class="pipeline-line"></div>
-                        <div class="pipeline-step">
-                            <div class="pipeline-icon active">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <div class="pipeline-line"></div>
+                            <div class="pipeline-step">
+                                <div class="pipeline-icon active">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                                </div>
+                                <span>Live</span>
                             </div>
-                            <span>Live</span>
                         </div>
                     </div>
                 </div>
@@ -429,7 +860,7 @@
         <div class="faq-list">
             <details class="faq-item" data-faq>
                 <summary>Is this free to run?</summary>
-                <p>Yes. Everything runs on GitHub Actions free tier (2,000 min/month). Each session lasts up to 6 hours. You also need a free ngrok account for the tunnel — no paid plans required.</p>
+                <p>Yes. Everything runs on GitHub Actions free tier (2,000 min/month). Each session lasts up to <time datetime="PT6H">6 hours</time>. You also need a free ngrok account for the tunnel — no paid plans required.</p>
             </details>
             <details class="faq-item" data-faq>
                 <summary>What are the requirements?</summary>
@@ -437,7 +868,7 @@
             </details>
             <details class="faq-item" data-faq>
                 <summary>How long does a session last?</summary>
-                <p>Up to 6 hours per workflow run. First run takes 3–5 extra minutes for the LLM model download. After that, subsequent runs start in under a minute if the cache is warm.</p>
+                <p>Up to <time datetime="PT6H">6 hours</time> per workflow run. First run takes 3–5 extra minutes for the LLM model download. After that, subsequent runs start in under a minute if the cache is warm.</p>
             </details>
             <details class="faq-item" data-faq>
                 <summary>Can I use a different model?</summary>
@@ -457,7 +888,7 @@
                 <div class="nav-brand">
                     <div class="logo-glass small">
                         <div class="logo-glass-bg"></div>
-                        <svg class="logo-svg" viewBox="0 0 28 28" fill="none">
+                        <svg class="logo-svg" viewBox="0 0 28 28" fill="none" aria-hidden="true">
                             <rect width="28" height="28" rx="6" fill="#1a1a2e"/>
                             <rect x="1" y="1" width="26" height="26" rx="5" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
                             <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#8b8b9e" font-size="14" font-weight="700" font-family="Inter, system-ui">P</text>
@@ -476,10 +907,77 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2025 Minh Tri Studio</p>
+            <p>&copy; <time datetime="2025">2025</time> Minh Tri Studio</p>
+            <div class="footer-badges">
+                <span class="footer-badge">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <span>100+ stars</span>
+                </span>
+                <span class="footer-badge">
+                    <span class="build-status-dot" aria-hidden="true"></span>
+                    <span>Build passing</span>
+                </span>
+            </div>
         </div>
     </footer>
 
     <script src="app.js"></script>
+
+    <!-- Mobile enhancements — runs after app.js -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const burger = document.getElementById('navBurger');
+        const mobileNav = document.getElementById('mobileNav');
+        const backdrop = document.getElementById('mobileNavBackdrop');
+        const closeBtn = document.getElementById('mobileNavClose');
+        const scrollTopBtn = document.getElementById('scrollTopBtn');
+
+        // ─── MutationObserver for mobile nav state sync ───
+        // Watches .open class changes to sync aria-expanded, backdrop, and body scroll lock
+        if (mobileNav) {
+            const observer = new MutationObserver(() => {
+                const isOpen = mobileNav.classList.contains('open');
+                if (burger) burger.setAttribute('aria-expanded', String(isOpen));
+                if (backdrop) backdrop.classList.toggle('active', isOpen);
+                document.body.classList.toggle('mobile-nav-open', isOpen);
+            });
+            observer.observe(mobileNav, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // ─── Close button handler ───
+        if (closeBtn && mobileNav && burger) {
+            closeBtn.addEventListener('click', () => {
+                mobileNav.classList.remove('open');
+                burger.classList.remove('active');
+            });
+        }
+
+        // ─── Escape key to close mobile nav ───
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && mobileNav && mobileNav.classList.contains('open')) {
+                mobileNav.classList.remove('open');
+                if (burger) burger.classList.remove('active');
+            }
+        });
+
+        // ─── Scroll to top button ───
+        if (scrollTopBtn) {
+            let scrollTicking = false;
+            window.addEventListener('scroll', () => {
+                if (!scrollTicking) {
+                    window.requestAnimationFrame(() => {
+                        scrollTopBtn.classList.toggle('visible', window.scrollY > 500);
+                        scrollTicking = false;
+                    });
+                    scrollTicking = true;
+                }
+            }, { passive: true });
+
+            scrollTopBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
+    });
+    </script>
 </body>
 </html>
